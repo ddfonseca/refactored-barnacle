@@ -15,7 +15,6 @@ beforeAll(async () => {
 	app = await createServer();
 	await createTestUser();
 	authToken = await getAuthToken(app);
-	console.log(authToken);
 });
 
 afterAll(async () => {

@@ -1,10 +1,16 @@
 import { Request, Response } from "express";
 import { ProductService } from "./product.service";
 import { logger } from "../utils/logger";
-
-const productService = new ProductService();
+import { MongoDBProductRepository } from "./mongodb.product.repository";
 
 export class ProductController {
+	private readonly productService: ProductService;
+
+	constructor() {
+		const productRepository = new MongoDBProductRepository();
+		this.productService = new ProductService(productRepository);
+	}
+
 	async getAllProducts(req: Request, res: Response) {
 		try {
 			const options = {
@@ -19,7 +25,7 @@ export class ProductController {
 				maxQuantity: req.query.maxQuantity ? parseInt(req.query.maxQuantity as string) : undefined,
 			};
 
-			const result = await productService.getAllProducts(options);
+			const result = await this.productService.getAllProducts(options);
 			res.json(result);
 		} catch (error) {
 			logger.error("Error in getAllProducts:", error);
@@ -29,7 +35,7 @@ export class ProductController {
 
 	async createProduct(req: Request, res: Response) {
 		try {
-			const product = await productService.createProduct(req.body);
+			const product = await this.productService.createProduct(req.body);
 			res.status(201).json(product);
 		} catch (error) {
 			logger.error("Error in createProduct:", error);
@@ -39,7 +45,7 @@ export class ProductController {
 
 	async updateProduct(req: Request, res: Response) {
 		try {
-			const product = await productService.updateProduct(req.params.id, req.body);
+			const product = await this.productService.updateProduct(req.params.id, req.body);
 			res.json(product);
 		} catch (error: any) {
 			logger.error("Error in updateProduct:", error);
@@ -53,7 +59,7 @@ export class ProductController {
 
 	async deleteProduct(req: Request, res: Response) {
 		try {
-			const product = await productService.deleteProduct(req.params.id);
+			const product = await this.productService.deleteProduct(req.params.id);
 			res.json(product);
 		} catch (error: any) {
 			logger.error("Error in deleteProduct:", error);
@@ -75,7 +81,7 @@ export class ProductController {
 				return res.status(400).json({ message: "Search term is required" });
 			}
 
-			const result = await productService.searchProducts(searchTerm, page, limit);
+			const result = await this.productService.searchProducts(searchTerm, page, limit);
 			res.json(result);
 		} catch (error) {
 			logger.error("Error in searchProducts:", error);

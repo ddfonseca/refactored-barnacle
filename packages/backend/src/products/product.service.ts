@@ -1,5 +1,6 @@
-import { Product, IProduct } from "./product.model";
+import { IProduct } from "./product.model";
 import { config } from "../config";
+import { ProductRepository } from "./product.repository";
 
 interface QueryOptions {
 	page?: number;
@@ -14,6 +15,8 @@ interface QueryOptions {
 }
 
 export class ProductService {
+	constructor(private readonly productRepository: ProductRepository) {}
+
 	async getAllProducts(options: QueryOptions) {
 		const {
 			page = 1,
@@ -42,11 +45,15 @@ export class ProductService {
 		}
 
 		const skip = (page - 1) * limit;
-		const sortOptions: { [key: string]: "asc" | "desc" } = { [sortBy]: sortOrder };
+		const sortOptions = { [sortBy]: sortOrder };
 
 		const [products, total] = await Promise.all([
-			Product.find(query).sort(sortOptions).skip(skip).limit(Math.min(limit, config.maxPageSize)),
-			Product.countDocuments(query),
+			this.productRepository.findAll(query, {
+				skip,
+				limit: Math.min(limit, config.maxPageSize),
+				sort: sortOptions,
+			}),
+			this.productRepository.count(query),
 		]);
 
 		return {
@@ -60,27 +67,20 @@ export class ProductService {
 	}
 
 	async createProduct(productData: Partial<IProduct>) {
-		const product = new Product(productData);
-		await product.save();
-		return product;
+		return this.productRepository.create(productData);
 	}
 
 	async updateProduct(id: string, updateData: Partial<IProduct>) {
-		const product = await Product.findByIdAndUpdate(
-			id,
-			{ ...updateData, updatedAt: new Date() },
-			{ new: true, runValidators: true }
-		);
+		const product = await this.productRepository.findByIdAndUpdate(id, updateData);
 		if (!product) throw new Error("Product not found");
 		return product;
 	}
 
 	async deleteProduct(id: string) {
-		const product = await Product.findByIdAndUpdate(
-			id,
-			{ isActive: false, updatedAt: new Date() },
-			{ new: true }
-		);
+		const product = await this.productRepository.findByIdAndUpdate(id, {
+			isActive: false,
+			updatedAt: new Date(),
+		});
 		if (!product) throw new Error("Product not found");
 		return product;
 	}
@@ -94,8 +94,11 @@ export class ProductService {
 		const skip = (page - 1) * limit;
 
 		const [products, total] = await Promise.all([
-			Product.find(query).skip(skip).limit(Math.min(limit, config.maxPageSize)),
-			Product.countDocuments(query),
+			this.productRepository.search(query, {
+				skip,
+				limit: Math.min(limit, config.maxPageSize),
+			}),
+			this.productRepository.count(query),
 		]);
 
 		return {
