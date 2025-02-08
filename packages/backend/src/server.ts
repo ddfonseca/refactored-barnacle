@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { authRouter } from "./auth/auth.routes";
 import { createProductRouter } from "./products/product.routes";
+import { createAuthRouter } from "./auth/auth.routes";
 
 export const createServer = async () => {
 	const app = express();
@@ -13,7 +13,7 @@ export const createServer = async () => {
 	app.use(express.json());
 
 	// Routes
-	app.use("/api/auth", authRouter);
+	app.use("/api/auth", createAuthRouter());
 	app.use("/api/products", createProductRouter());
 
 	// Error handling middleware
