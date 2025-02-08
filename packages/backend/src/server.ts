@@ -1,34 +1,20 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { ProductController } from "./products/product.controller";
 import { authRouter } from "./auth/auth.routes";
-import { createAuthMiddleware } from "./auth/auth.middleware";
-import { AuthService } from "./auth/auth.service";
-import { MongoDBUserRepository } from "./users/user.repository";
+import { createProductRouter } from "./products/product.routes";
 
 export const createServer = async () => {
 	const app = express();
-	const productController = new ProductController();
 
 	// Middleware
 	app.use(helmet());
 	app.use(cors());
 	app.use(express.json());
 
-	// Auth routes
+	// Routes
 	app.use("/api/auth", authRouter);
-
-	// Protected Product routes
-	const userRepository = new MongoDBUserRepository();
-	const authService = new AuthService(userRepository);
-	const authenticateToken = createAuthMiddleware(authService);
-
-	app.get("/api/products", authenticateToken, productController.getAllProducts.bind(productController));
-	app.post("/api/products", authenticateToken, productController.createProduct.bind(productController));
-	app.put("/api/products/:id", authenticateToken, productController.updateProduct.bind(productController));
-	app.delete("/api/products/:id", authenticateToken, productController.deleteProduct.bind(productController));
-	app.get("/api/products/search", authenticateToken, productController.searchProducts.bind(productController));
+	app.use("/api/products", createProductRouter());
 
 	// Error handling middleware
 	app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
