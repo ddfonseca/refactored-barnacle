@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ProductModal } from './ProductModal';
 
 interface AddProductButtonProps {
@@ -10,13 +12,10 @@ export function AddProductButton({ onProductAdded }: AddProductButtonProps) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsModalOpen(true)}
-        className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-      >
+      <Button onClick={() => setIsModalOpen(true)}>
+        <Plus className="mr-2 h-4 w-4" />
         Add Product
-      </button>
+      </Button>
 
       {isModalOpen && (
         <ProductModal
