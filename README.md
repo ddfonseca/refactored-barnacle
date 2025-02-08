@@ -1,94 +1,151 @@
 # Inventory Management System
 
-A full-stack inventory management system built with Node.js, Express, TypeScript, and MongoDB for the backend, and a modern frontend (to be implemented).
-
-## Project Structure
-
-This is a monorepo containing both the frontend and backend applications:
-
-```
-├── packages/
-│   ├── backend/     # Node.js + Express + TypeScript backend
-│   └── frontend/    # Frontend application (to be implemented)
-```
+A modern full-stack application for managing product inventory. Built with React, Node.js, Express, TypeScript, and MongoDB.
 
 ## Features
 
-### Backend
-- Product CRUD operations with JWT authentication
-- Pagination, filtering, and sorting for product listing
-- Search functionality for products
-- Soft delete implementation
-- MongoDB database integration
-- Docker Compose setup for easy deployment
-
-### Frontend (Coming Soon)
-- Modern and responsive UI
-- Real-time inventory updates
-- Advanced search and filtering
-- User authentication and authorization
+- 🔐 User Authentication (JWT)
+- 📦 Product Management (CRUD operations)
+- 🔍 Advanced Search & Filtering
+- 📱 Responsive Design
+- 🔄 Real-time Updates
 
 ## Prerequisites
 
-- Node.js (v18 or higher)
 - Docker and Docker Compose
-- MongoDB (handled by Docker Compose)
+- Node.js 18+ (for local development)
 - npm or yarn
 
-## Setup
+## Quick Start with Docker
 
-1. Clone the repository
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/yourusername/full-stack-test.git
+   cd full-stack-test
+   ```
+
+2. Create environment files:
+
+   For backend (`packages/backend/.env`):
+
+   ```bash
+   cp packages/backend/.env.example packages/backend/.env
+   ```
+
+   For frontend (`packages/frontend/.env`):
+
+   ```bash
+   cp packages/frontend/.env.example packages/frontend/.env
+   ```
+
+3. Start the application:
+
+   ```bash
+   docker-compose up
+   ```
+
+   The services will be available at:
+
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - MongoDB: mongodb://localhost:27017
+
+## Manual Setup (Development)
+
+### Backend Setup
+
+1. Navigate to the backend directory:
+
+   ```bash
+   cd packages/backend
+   ```
+
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Set up environment variables:
-   - Copy `.env.example` to `.env` in the backend package
-   - Configure the variables as needed
 
-4. Start the development servers:
    ```bash
-   # Start both frontend and backend
+   cp .env.example .env
+   ```
+
+   Edit `.env` with your configuration.
+
+4. Start the development server:
+   ```bash
    npm run dev
-
-   # Or start them individually
-   npm run dev:backend
-   npm run dev:frontend
    ```
 
-5. Or use Docker Compose:
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+
    ```bash
-   docker-compose up --build
+   cd packages/frontend
    ```
 
-## Testing
+2. Install dependencies:
 
-Run all tests:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` with your configuration.
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+### Database Setup
+
+For local development without Docker:
+
+1. Install MongoDB Community Edition:
+
+   - [MongoDB Installation Guide](https://docs.mongodb.com/manual/installation/)
+
+2. Start MongoDB service:
+   ```bash
+   sudo systemctl start mongod    # Linux
+   brew services start mongodb     # macOS
+   ```
+
+## Running Tests
+
+### Backend Tests
+
 ```bash
+cd packages/backend
 npm test
-```
-
-Or test specific packages:
-```bash
-npm run test:backend
-npm run test:frontend
 ```
 
 ## API Documentation
 
-API documentation can be found in the backend package's README at `packages/backend/README.md`.
+The API documentation is available at `/api/docs` when running the backend server.
 
-## Contributing
+## Project Structure
 
-1. Create a new branch for your feature
-2. Make your changes
-3. Run tests and ensure they pass
-4. Submit a pull request
-
-## License
-
-MIT
-```bash
-npm test
+```
+├── packages/
+│   ├── backend/              # Node.js + Express backend
+│   │   ├── src/
+│   │   ├── tests/
+│   │   └── package.json
+│   └── frontend/             # React frontend
+│       ├── src/
+│       ├── public/
+│       └── package.json
+├── docker-compose.yml        # Docker composition
+└── README.md
 ```
