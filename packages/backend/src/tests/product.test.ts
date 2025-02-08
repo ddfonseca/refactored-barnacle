@@ -2,19 +2,21 @@ import request from "supertest";
 import { Express } from "express";
 import mongoose from "mongoose";
 import { setupTestDB } from "./setup";
-import { Product } from "../products/product.model";
 import { createServer } from "../server";
 import { createTestUser, getAuthToken } from "./helpers";
+import { MongoDBProductRepository } from "../products/mongodb.product.repository";
 
 setupTestDB();
 
 let app: Express;
 let authToken: string;
+let productRepository: MongoDBProductRepository;
 
 beforeAll(async () => {
 	app = await createServer();
 	await createTestUser();
 	authToken = await getAuthToken(app);
+	productRepository = new MongoDBProductRepository();
 });
 
 afterAll(async () => {
@@ -38,9 +40,21 @@ describe("Product Endpoints", () => {
 
 		it("should return products with pagination", async () => {
 			// Create test products
-			await Product.create([
-				{ name: "Product 1", description: "Desc 1", price: 100, category: "Category 1", quantity: 10 },
-				{ name: "Product 2", description: "Desc 2", price: 200, category: "Category 2", quantity: 20 },
+			await Promise.all([
+				productRepository.create({
+					name: "Product 1",
+					description: "Desc 1",
+					price: 100,
+					category: "Category 1",
+					quantity: 10,
+				}),
+				productRepository.create({
+					name: "Product 2",
+					description: "Desc 2",
+					price: 200,
+					category: "Category 2",
+					quantity: 20,
+				}),
 			]);
 
 			const res = await request(app).get("/api/products").set("Authorization", `Bearer ${authToken}`);
@@ -51,9 +65,21 @@ describe("Product Endpoints", () => {
 		});
 
 		it("should filter products by category", async () => {
-			await Product.create([
-				{ name: "Product 1", description: "Desc 1", price: 100, category: "Category 1", quantity: 10 },
-				{ name: "Product 2", description: "Desc 2", price: 200, category: "Category 2", quantity: 20 },
+			await Promise.all([
+				productRepository.create({
+					name: "Product 1",
+					description: "Desc 1",
+					price: 100,
+					category: "Category 1",
+					quantity: 10,
+				}),
+				productRepository.create({
+					name: "Product 2",
+					description: "Desc 2",
+					price: 200,
+					category: "Category 2",
+					quantity: 20,
+				}),
 			]);
 
 			const res = await request(app)
@@ -66,14 +92,14 @@ describe("Product Endpoints", () => {
 		});
 
 		it("should handle default sorting when sortBy is not provided", async () => {
-			await Product.create({
+			await productRepository.create({
 				name: "Product A",
 				description: "First",
 				price: 100,
 				category: "Category 1",
 				quantity: 10,
 			});
-			await Product.create({
+			await productRepository.create({
 				name: "Product B",
 				description: "Second",
 				price: 200,
@@ -93,16 +119,28 @@ describe("Product Endpoints", () => {
 		});
 
 		it("should handle partial price range filters", async () => {
-			await Product.create([
-				{ name: "Budget Product", description: "Cheap", price: 50, category: "Category 1", quantity: 10 },
-				{ name: "Mid Product", description: "Medium", price: 150, category: "Category 1", quantity: 20 },
-				{
+			await Promise.all([
+				productRepository.create({
+					name: "Budget Product",
+					description: "Cheap",
+					price: 50,
+					category: "Category 1",
+					quantity: 10,
+				}),
+				productRepository.create({
+					name: "Mid Product",
+					description: "Medium",
+					price: 150,
+					category: "Category 1",
+					quantity: 20,
+				}),
+				productRepository.create({
 					name: "Expensive Product",
 					description: "Expensive",
 					price: 300,
 					category: "Category 1",
 					quantity: 5,
-				},
+				}),
 			]);
 
 			// Test minPrice only
@@ -121,10 +159,28 @@ describe("Product Endpoints", () => {
 		});
 
 		it("should handle partial quantity range filters", async () => {
-			await Product.create([
-				{ name: "Low Stock", description: "Few items", price: 100, category: "Category 1", quantity: 5 },
-				{ name: "Medium Stock", description: "Some items", price: 100, category: "Category 1", quantity: 15 },
-				{ name: "High Stock", description: "Many items", price: 100, category: "Category 1", quantity: 25 },
+			await Promise.all([
+				productRepository.create({
+					name: "Low Stock",
+					description: "Few items",
+					price: 100,
+					category: "Category 1",
+					quantity: 5,
+				}),
+				productRepository.create({
+					name: "Medium Stock",
+					description: "Some items",
+					price: 100,
+					category: "Category 1",
+					quantity: 15,
+				}),
+				productRepository.create({
+					name: "High Stock",
+					description: "Many items",
+					price: 100,
+					category: "Category 1",
+					quantity: 25,
+				}),
 			]);
 
 			// Test minQuantity only
@@ -178,7 +234,7 @@ describe("Product Endpoints", () => {
 			expect(res.body.price).toBe(productData.price);
 
 			// Verify product was saved to database
-			const product = await Product.findById(res.body._id);
+			const product = await productRepository.findById(res.body._id);
 			expect(product).toBeTruthy();
 			expect(product?.name).toBe(productData.name);
 		});
@@ -207,7 +263,7 @@ describe("Product Endpoints", () => {
 		});
 
 		it("should update an existing product", async () => {
-			const product = await Product.create({
+			const product = await productRepository.create({
 				name: "Original Product",
 				description: "Original Description",
 				price: 100,
@@ -231,7 +287,7 @@ describe("Product Endpoints", () => {
 			expect(res.body.description).toBe(product.description); // Unchanged field
 
 			// Verify update in database
-			const updatedProduct = await Product.findById(product._id);
+			const updatedProduct = await productRepository.findById(product._id);
 			expect(updatedProduct?.name).toBe(updateData.name);
 		});
 
@@ -255,7 +311,7 @@ describe("Product Endpoints", () => {
 		});
 
 		it("should soft delete a product", async () => {
-			const product = await Product.create({
+			const product = await productRepository.create({
 				name: "Product to Delete",
 				description: "Description",
 				price: 100,
@@ -270,7 +326,7 @@ describe("Product Endpoints", () => {
 			expect(res.status).toBe(200);
 
 			// Verify product was soft deleted
-			const deletedProduct = await Product.findById(product._id);
+			const deletedProduct = await productRepository.findById(product._id);
 			expect(deletedProduct?.isActive).toBe(false);
 		});
 
@@ -286,22 +342,28 @@ describe("Product Endpoints", () => {
 
 	describe("GET /api/products/search", () => {
 		beforeEach(async () => {
-			await Product.create([
-				{
+			await Promise.all([
+				productRepository.create({
 					name: "iPhone 12",
 					description: "Apple smartphone",
 					price: 999,
 					category: "Electronics",
 					quantity: 10,
-				},
-				{ name: "Samsung TV", description: "Smart TV", price: 799, category: "Electronics", quantity: 5 },
-				{
+				}),
+				productRepository.create({
+					name: "Samsung TV",
+					description: "Smart TV",
+					price: 799,
+					category: "Electronics",
+					quantity: 5,
+				}),
+				productRepository.create({
 					name: "Running Shoes",
 					description: "Sports equipment",
 					price: 99,
 					category: "Sports",
 					quantity: 20,
-				},
+				}),
 			]);
 		});
 

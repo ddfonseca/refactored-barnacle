@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { ProductController } from "./products/product.controller";
-import { authRouter } from "./auth/auth.controller";
+import { authRouter } from "./auth/auth.routes";
 import { authenticateToken } from "./auth/auth.middleware";
 
 export const createServer = async () => {

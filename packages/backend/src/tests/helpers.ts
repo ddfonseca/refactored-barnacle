@@ -14,7 +14,6 @@ export async function getAuthToken(app: Express) {
 		username: "testuser",
 		password: "test123",
 	});
-	console.log(response.body);
 
 	return response.body.accessToken;
 }
