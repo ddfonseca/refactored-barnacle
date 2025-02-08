@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { AddProductButton } from "./AddProductButton";
+
 export function ProductList() {
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -79,8 +81,9 @@ export function ProductList() {
 
 	return (
 		<Card>
-			<CardHeader>
+			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 				<CardTitle>Products</CardTitle>
+				<AddProductButton onProductAdded={fetchProducts} />
 			</CardHeader>
 			<CardContent>
 				{/* Filters */}
