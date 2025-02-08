@@ -3,6 +3,10 @@ FROM node:20-slim as builder
 
 WORKDIR /usr/src/app
 
+# Add build arguments
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Copy root package.json and workspace files
 COPY package*.json ./
 COPY packages/frontend/package*.json ./packages/frontend/
