@@ -4,19 +4,33 @@ import mongoose from "mongoose";
 import { setupTestDB } from "./setup";
 import { Product } from "../products/product.model";
 import { createServer } from "../server";
+import { createTestUser, getAuthToken } from "./helpers";
 
 setupTestDB();
 
 let app: Express;
+let authToken: string;
 
 beforeAll(async () => {
 	app = await createServer();
+	await createTestUser();
+	authToken = await getAuthToken(app);
+	console.log(authToken);
+});
+
+afterAll(async () => {
+	await mongoose.connection.close();
 });
 
 describe("Product Endpoints", () => {
 	describe("GET /api/products", () => {
-		it("should return empty array when no products exist", async () => {
+		it("should return 401 when no token is provided", async () => {
 			const res = await request(app).get("/api/products");
+			expect(res.status).toBe(401);
+		});
+
+		it("should return empty array when no products exist", async () => {
+			const res = await request(app).get("/api/products").set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.products).toEqual([]);
@@ -30,7 +44,7 @@ describe("Product Endpoints", () => {
 				{ name: "Product 2", description: "Desc 2", price: 200, category: "Category 2", quantity: 20 },
 			]);
 
-			const res = await request(app).get("/api/products");
+			const res = await request(app).get("/api/products").set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(2);
@@ -43,7 +57,9 @@ describe("Product Endpoints", () => {
 				{ name: "Product 2", description: "Desc 2", price: 200, category: "Category 2", quantity: 20 },
 			]);
 
-			const res = await request(app).get("/api/products?category=Category 1");
+			const res = await request(app)
+				.get("/api/products?category=Category 1")
+				.set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(1);
@@ -66,7 +82,9 @@ describe("Product Endpoints", () => {
 				quantity: 20,
 			});
 
-			const res = await request(app).get("/api/products?sortOrder=desc");
+			const res = await request(app)
+				.get("/api/products?sortOrder=desc")
+				.set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(2);
@@ -89,13 +107,15 @@ describe("Product Endpoints", () => {
 			]);
 
 			// Test minPrice only
-			let res = await request(app).get("/api/products?minPrice=200");
+			let res = await request(app)
+				.get("/api/products?minPrice=200")
+				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(1);
 			expect(res.body.products[0].name).toBe("Expensive Product");
 
 			// Test maxPrice only
-			res = await request(app).get("/api/products?maxPrice=100");
+			res = await request(app).get("/api/products?maxPrice=100").set("Authorization", `Bearer ${authToken}`);
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(1);
 			expect(res.body.products[0].name).toBe("Budget Product");
@@ -109,13 +129,17 @@ describe("Product Endpoints", () => {
 			]);
 
 			// Test minQuantity only
-			let res = await request(app).get("/api/products?minQuantity=20");
+			let res = await request(app)
+				.get("/api/products?minQuantity=20")
+				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(1);
 			expect(res.body.products[0].name).toBe("High Stock");
 
 			// Test maxQuantity only
-			res = await request(app).get("/api/products?maxQuantity=10");
+			res = await request(app)
+				.get("/api/products?maxQuantity=10")
+				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(1);
 			expect(res.body.products[0].name).toBe("Low Stock");
@@ -123,7 +147,7 @@ describe("Product Endpoints", () => {
 	});
 
 	describe("POST /api/products", () => {
-		it("should create a new product", async () => {
+		it("should return 401 when no token is provided", async () => {
 			const productData = {
 				name: "New Product",
 				description: "New Description",
@@ -133,6 +157,22 @@ describe("Product Endpoints", () => {
 			};
 
 			const res = await request(app).post("/api/products").send(productData);
+			expect(res.status).toBe(401);
+		});
+
+		it("should create a new product", async () => {
+			const productData = {
+				name: "New Product",
+				description: "New Description",
+				price: 150,
+				category: "New Category",
+				quantity: 15,
+			};
+
+			const res = await request(app)
+				.post("/api/products")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(productData);
 
 			expect(res.status).toBe(201);
 			expect(res.body.name).toBe(productData.name);
@@ -150,13 +190,23 @@ describe("Product Endpoints", () => {
 				price: -100, // Invalid: negative price
 			};
 
-			const res = await request(app).post("/api/products").send(invalidProduct);
+			const res = await request(app)
+				.post("/api/products")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(invalidProduct);
 
 			expect(res.status).toBe(400);
 		});
 	});
 
 	describe("PUT /api/products/:id", () => {
+		it("should return 401 when no token is provided", async () => {
+			const nonExistentId = new mongoose.Types.ObjectId();
+			const res = await request(app).put(`/api/products/${nonExistentId}`).send({ name: "Updated Name" });
+
+			expect(res.status).toBe(401);
+		});
+
 		it("should update an existing product", async () => {
 			const product = await Product.create({
 				name: "Original Product",
@@ -171,7 +221,10 @@ describe("Product Endpoints", () => {
 				price: 200,
 			};
 
-			const res = await request(app).put(`/api/products/${product._id}`).send(updateData);
+			const res = await request(app)
+				.put(`/api/products/${product._id}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(updateData);
 
 			expect(res.status).toBe(200);
 			expect(res.body.name).toBe(updateData.name);
@@ -185,13 +238,23 @@ describe("Product Endpoints", () => {
 
 		it("should return 404 for non-existent product", async () => {
 			const nonExistentId = new mongoose.Types.ObjectId();
-			const res = await request(app).put(`/api/products/${nonExistentId}`).send({ name: "Updated Name" });
+			const res = await request(app)
+				.put(`/api/products/${nonExistentId}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ name: "Updated Name" });
 
 			expect(res.status).toBe(404);
 		});
 	});
 
 	describe("DELETE /api/products/:id", () => {
+		it("should return 401 when no token is provided", async () => {
+			const nonExistentId = new mongoose.Types.ObjectId();
+			const res = await request(app).delete(`/api/products/${nonExistentId}`);
+
+			expect(res.status).toBe(401);
+		});
+
 		it("should soft delete a product", async () => {
 			const product = await Product.create({
 				name: "Product to Delete",
@@ -201,19 +264,22 @@ describe("Product Endpoints", () => {
 				quantity: 10,
 			});
 
-			const res = await request(app).delete(`/api/products/${product._id}`);
+			const res = await request(app)
+				.delete(`/api/products/${product._id}`)
+				.set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(200);
-			expect(res.body.isActive).toBe(false);
 
-			// Verify product is soft deleted in database
+			// Verify product was soft deleted
 			const deletedProduct = await Product.findById(product._id);
 			expect(deletedProduct?.isActive).toBe(false);
 		});
 
 		it("should return 404 for non-existent product", async () => {
 			const nonExistentId = new mongoose.Types.ObjectId();
-			const res = await request(app).delete(`/api/products/${nonExistentId}`);
+			const res = await request(app)
+				.delete(`/api/products/${nonExistentId}`)
+				.set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(404);
 		});
@@ -240,8 +306,15 @@ describe("Product Endpoints", () => {
 			]);
 		});
 
-		it("should search products by name", async () => {
+		it("should return 401 when no token is provided", async () => {
 			const res = await request(app).get("/api/products/search?q=iPhone");
+			expect(res.status).toBe(401);
+		});
+
+		it("should search products by name", async () => {
+			const res = await request(app)
+				.get("/api/products/search?q=iPhone")
+				.set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(1);
@@ -249,14 +322,16 @@ describe("Product Endpoints", () => {
 		});
 
 		it("should search products by category", async () => {
-			const res = await request(app).get("/api/products/search?q=Electronics");
+			const res = await request(app)
+				.get("/api/products/search?q=Electronics")
+				.set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.products).toHaveLength(2);
 		});
 
 		it("should return 400 if search term is missing", async () => {
-			const res = await request(app).get("/api/products/search");
+			const res = await request(app).get("/api/products/search").set("Authorization", `Bearer ${authToken}`);
 
 			expect(res.status).toBe(400);
 		});

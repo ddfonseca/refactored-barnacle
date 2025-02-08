@@ -16,9 +16,7 @@ export const setupTestDB = () => {
 	});
 
 	afterEach(async () => {
-		const collections = await mongoose.connection.db.collections();
-		for (const collection of collections) {
-			await collection.deleteMany({});
-		}
+		// Only clear products collection
+		await mongoose.connection.db.collection('products').deleteMany({});
 	});
 };
