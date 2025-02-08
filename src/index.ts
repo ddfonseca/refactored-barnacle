@@ -26,9 +26,9 @@ mongoose
 
 // Product routes
 app.get("/api/products", productController.getAllProducts.bind(productController));
-app.post("/api/products", authMiddleware, productController.createProduct.bind(productController));
-app.put("/api/products/:id", authMiddleware, productController.updateProduct.bind(productController));
-app.delete("/api/products/:id", authMiddleware, productController.deleteProduct.bind(productController));
+app.post("/api/products", productController.createProduct.bind(productController));
+app.put("/api/products/:id", productController.updateProduct.bind(productController));
+app.delete("/api/products/:id", productController.deleteProduct.bind(productController));
 app.get("/api/products/search", productController.searchProducts.bind(productController));
 
 // Error handling middleware
