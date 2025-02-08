@@ -24,7 +24,12 @@
     "testMatch": [
       "**/*.test.ts"
     ],
-    "verbose": true
+    "verbose": true,
+    "testEnvironmentOptions": {
+      "env": {
+        "NODE_ENV": "test"
+      }
+    }
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
