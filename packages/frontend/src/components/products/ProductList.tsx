@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Product, productApi, CATEGORIES, PRICE_RANGES } from "../../services/api";
 import { ProductModal } from "./ProductModal";
+import { DeleteProductModal } from "./DeleteProductModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,11 +12,12 @@ export function ProductList() {
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [page, setPage] = useState(1);
-	const [total, setTotal] = useState(0);
+	const [totalPages, setTotalPages] = useState<number>(1);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("");
 	const [selectedPriceRange, setSelectedPriceRange] = useState("");
 	const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+	const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
 	const fetchProducts = async () => {
 		setLoading(true);
@@ -38,10 +40,17 @@ export function ProductList() {
 				? await productApi.searchProducts(searchQuery)
 				: await productApi.getProducts(page, 10, filters);
 
-			setProducts(data.products);
-			setTotal(data.total);
+			setProducts(data.products || []);
+			setTotalPages(data.pagination?.pages || 1);
+
+			// If we're on a page higher than the total pages, go back to page 1
+			if (page > (data.pagination?.pages || 1)) {
+				setPage(1);
+			}
 		} catch (error) {
 			console.error("Error fetching products:", error);
+			setProducts([]);
+			setTotalPages(1);
 		}
 		setLoading(false);
 	};
@@ -57,6 +66,15 @@ export function ProductList() {
 	const handleUpdate = async () => {
 		await fetchProducts();
 		setEditingProduct(null);
+	};
+
+	const handleDelete = (product: Product) => {
+		setDeletingProduct(product);
+	};
+
+	const handleDeleteConfirm = async () => {
+		await fetchProducts();
+		setDeletingProduct(null);
 	};
 
 	return (
@@ -134,9 +152,19 @@ export function ProductList() {
 										<TableCell>{product.category}</TableCell>
 										<TableCell>{product.quantity}</TableCell>
 										<TableCell>
-											<Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
-												<Pencil className="h-4 w-4" />
-											</Button>
+											<div className="flex space-x-2">
+												<Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+													<Pencil className="h-4 w-4" />
+												</Button>
+												<Button
+													variant="ghost"
+													size="icon"
+													className="text-destructive"
+													onClick={() => handleDelete(product)}
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											</div>
 										</TableCell>
 									</TableRow>
 								))
@@ -151,13 +179,9 @@ export function ProductList() {
 						Previous
 					</Button>
 					<span className="text-sm text-muted-foreground">
-						Page {page} of {Math.ceil(total / 10)}
+						Page {page} of {totalPages}
 					</span>
-					<Button
-						variant="outline"
-						onClick={() => setPage((p) => p + 1)}
-						disabled={page >= Math.ceil(total / 10)}
-					>
+					<Button variant="outline" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages}>
 						Next
 					</Button>
 				</div>
@@ -169,6 +193,15 @@ export function ProductList() {
 					product={editingProduct}
 					onClose={() => setEditingProduct(null)}
 					onSave={handleUpdate}
+				/>
+			)}
+
+			{/* Delete Modal */}
+			{deletingProduct && (
+				<DeleteProductModal
+					product={deletingProduct}
+					onClose={() => setDeletingProduct(null)}
+					onDelete={handleDeleteConfirm}
 				/>
 			)}
 		</Card>

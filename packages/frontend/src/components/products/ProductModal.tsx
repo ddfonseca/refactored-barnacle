@@ -4,6 +4,7 @@ import { Product, ProductInput, CATEGORIES, productApi } from "../../services/ap
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
 
 interface ProductModalProps {
 	product?: Product;
@@ -12,10 +13,13 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ product, onClose, onSave }: ProductModalProps) {
+	const [apiError, setApiError] = useState<string | null>(null);
+
 	const {
 		register,
 		handleSubmit,
 		formState: { errors, isSubmitting },
+		setError,
 	} = useForm<ProductInput>({
 		defaultValues: product
 			? {
@@ -29,6 +33,7 @@ export function ProductModal({ product, onClose, onSave }: ProductModalProps) {
 	});
 
 	const onSubmit = async (data: ProductInput) => {
+		setApiError(null);
 		try {
 			if (product) {
 				await productApi.updateProduct(product._id, data);
@@ -36,8 +41,24 @@ export function ProductModal({ product, onClose, onSave }: ProductModalProps) {
 				await productApi.createProduct(data);
 			}
 			onSave();
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Error saving product:", error);
+
+			// Handle validation errors from the API
+			if (error.response?.data?.errors) {
+				const apiErrors = error.response.data.errors;
+				Object.keys(apiErrors).forEach((field) => {
+					setError(field as keyof ProductInput, {
+						type: "server",
+						message: apiErrors[field],
+					});
+				});
+			} else {
+				// Handle general API errors
+				setApiError(
+					error.response?.data?.message || "An error occurred while saving the product. Please try again."
+				);
+			}
 		}
 	};
 
@@ -50,6 +71,9 @@ export function ProductModal({ product, onClose, onSave }: ProductModalProps) {
 						<X className="h-4 w-4" />
 					</Button>
 				</DialogHeader>
+				{apiError && (
+					<div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">{apiError}</div>
+				)}
 				<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 					<div className="space-y-2">
 						<label className="text-sm font-medium">Name</label>

@@ -29,9 +29,11 @@ export interface ProductInput {
 
 export interface PaginatedResponse<T> {
 	products: T[];
-	total: number;
-	page: number;
-	limit: number;
+	pagination: {
+		total: number;
+		page: number;
+		pages: number;
+	};
 }
 
 export const productApi = {
