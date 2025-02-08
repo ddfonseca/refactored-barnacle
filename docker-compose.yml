@@ -1,10 +1,10 @@
 version: '3.8'
 
 services:
-  app:
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: packages/backend/Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -12,10 +12,12 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/inventory
       - JWT_SECRET=${JWT_SECRET}
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
+      - ./packages/backend:/usr/src/app/packages/backend
+      - /usr/src/app/packages/backend/node_modules
     depends_on:
       - mongodb
+
+  # Frontend service will be added here later
 
   mongodb:
     image: mongo:latest
