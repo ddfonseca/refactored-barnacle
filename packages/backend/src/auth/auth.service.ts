@@ -1,11 +1,14 @@
 import jwt from 'jsonwebtoken';
-import { User, UserModel } from '../users/user.model';
+import { User } from '../users/user.model';
+import { IUserRepository } from '../users/user.repository';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const REFRESH_SECRET = process.env.REFRESH_SECRET || 'your-refresh-secret-key';
 
 export class AuthService {
-    static generateTokens(user: User) {
+    constructor(private userRepository: IUserRepository) {}
+
+    private generateTokens(user: User) {
         const accessToken = jwt.sign(
             { userId: user._id, username: user.username },
             JWT_SECRET,
@@ -21,7 +24,7 @@ export class AuthService {
         return { accessToken, refreshToken };
     }
 
-    static async verifyAccessToken(token: string) {
+    async verifyAccessToken(token: string) {
         try {
             const decoded = jwt.verify(token, JWT_SECRET);
             return decoded;
@@ -30,10 +33,10 @@ export class AuthService {
         }
     }
 
-    static async verifyRefreshToken(token: string) {
+    private async verifyRefreshToken(token: string) {
         try {
             const decoded = jwt.verify(token, REFRESH_SECRET) as { userId: string };
-            const user = await UserModel.findById(decoded.userId);
+            const user = await this.userRepository.findById(decoded.userId);
             
             if (!user || user.refreshToken !== token) {
                 throw new Error('Invalid refresh token');
@@ -45,8 +48,27 @@ export class AuthService {
         }
     }
 
-    static async login(username: string, password: string) {
-        const user = await UserModel.findOne({ username });
+    async register(username: string, password: string) {
+        // Check if user already exists
+        const existingUser = await this.userRepository.findByUsername(username);
+        if (existingUser) {
+            throw new Error('Username already exists');
+        }
+
+        // Create new user
+        const user = await this.userRepository.create(username, password);
+
+        // Generate tokens
+        const tokens = this.generateTokens(user);
+
+        // Save refresh token
+        await this.userRepository.updateRefreshToken(user._id, tokens.refreshToken);
+
+        return tokens;
+    }
+
+    async login(username: string, password: string) {
+        const user = await this.userRepository.findByUsername(username);
         
         if (!user) {
             throw new Error('Invalid credentials');
@@ -60,24 +82,25 @@ export class AuthService {
         const tokens = this.generateTokens(user);
         
         // Save refresh token to user document
-        user.refreshToken = tokens.refreshToken;
-        await user.save();
+        await this.userRepository.updateRefreshToken(user._id, tokens.refreshToken);
 
         return tokens;
     }
 
-    static async refreshToken(refreshToken: string) {
+    async refreshToken(refreshToken: string) {
         const user = await this.verifyRefreshToken(refreshToken);
         const tokens = this.generateTokens(user);
 
         // Update refresh token
-        user.refreshToken = tokens.refreshToken;
-        await user.save();
+        await this.userRepository.updateRefreshToken(user._id, tokens.refreshToken);
 
         return tokens;
     }
 
-    static async logout(userId: string) {
-        await UserModel.findByIdAndUpdate(userId, { refreshToken: null });
+    async logout(userId: string) {
+        const user = await this.userRepository.updateRefreshToken(userId, undefined);
+        if (!user) {
+            throw new Error('User not found');
+        }
     }
 }

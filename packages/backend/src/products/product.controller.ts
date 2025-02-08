@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ProductService } from "./product.service";
 import { logger } from "../utils/logger";
-import { MongoDBProductRepository } from "./mongodb.product.repository";
+import { MongoDBProductRepository } from "./product.repository";
 
 export class ProductController {
 	private readonly productService: ProductService;

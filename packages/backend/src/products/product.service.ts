@@ -1,6 +1,6 @@
 import { IProduct } from "./product.model";
 import { config } from "../config";
-import { ProductRepository } from "./product.repository";
+import { IProductRepository } from "./product.repository";
 
 interface QueryOptions {
 	page?: number;
@@ -15,7 +15,7 @@ interface QueryOptions {
 }
 
 export class ProductService {
-	constructor(private readonly productRepository: ProductRepository) {}
+	constructor(private readonly productRepository: IProductRepository) {}
 
 	async getAllProducts(options: QueryOptions) {
 		const {

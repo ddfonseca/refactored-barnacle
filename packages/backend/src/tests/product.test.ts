@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import { setupTestDB } from "./setup";
 import { createServer } from "../server";
 import { createTestUser, getAuthToken } from "./helpers";
-import { MongoDBProductRepository } from "../products/mongodb.product.repository";
+import { MongoDBProductRepository } from "../products/product.repository";
 
 setupTestDB();
 
