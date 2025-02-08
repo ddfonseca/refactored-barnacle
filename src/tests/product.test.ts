@@ -49,6 +49,77 @@ describe("Product Endpoints", () => {
 			expect(res.body.products).toHaveLength(1);
 			expect(res.body.products[0].name).toBe("Product 1");
 		});
+
+		it("should handle default sorting when sortBy is not provided", async () => {
+			await Product.create({
+				name: "Product A",
+				description: "First",
+				price: 100,
+				category: "Category 1",
+				quantity: 10,
+			});
+			await Product.create({
+				name: "Product B",
+				description: "Second",
+				price: 200,
+				category: "Category 1",
+				quantity: 20,
+			});
+
+			const res = await request(app).get("/api/products?sortOrder=desc");
+
+			expect(res.status).toBe(200);
+			expect(res.body.products).toHaveLength(2);
+			// Should default to sorting by createdAt
+			expect(res.body.products[0].name).toBe("Product B");
+			expect(res.body.products[1].name).toBe("Product A");
+		});
+
+		it("should handle partial price range filters", async () => {
+			await Product.create([
+				{ name: "Budget Product", description: "Cheap", price: 50, category: "Category 1", quantity: 10 },
+				{ name: "Mid Product", description: "Medium", price: 150, category: "Category 1", quantity: 20 },
+				{
+					name: "Expensive Product",
+					description: "Expensive",
+					price: 300,
+					category: "Category 1",
+					quantity: 5,
+				},
+			]);
+
+			// Test minPrice only
+			let res = await request(app).get("/api/products?minPrice=200");
+			expect(res.status).toBe(200);
+			expect(res.body.products).toHaveLength(1);
+			expect(res.body.products[0].name).toBe("Expensive Product");
+
+			// Test maxPrice only
+			res = await request(app).get("/api/products?maxPrice=100");
+			expect(res.status).toBe(200);
+			expect(res.body.products).toHaveLength(1);
+			expect(res.body.products[0].name).toBe("Budget Product");
+		});
+
+		it("should handle partial quantity range filters", async () => {
+			await Product.create([
+				{ name: "Low Stock", description: "Few items", price: 100, category: "Category 1", quantity: 5 },
+				{ name: "Medium Stock", description: "Some items", price: 100, category: "Category 1", quantity: 15 },
+				{ name: "High Stock", description: "Many items", price: 100, category: "Category 1", quantity: 25 },
+			]);
+
+			// Test minQuantity only
+			let res = await request(app).get("/api/products?minQuantity=20");
+			expect(res.status).toBe(200);
+			expect(res.body.products).toHaveLength(1);
+			expect(res.body.products[0].name).toBe("High Stock");
+
+			// Test maxQuantity only
+			res = await request(app).get("/api/products?maxQuantity=10");
+			expect(res.status).toBe(200);
+			expect(res.body.products).toHaveLength(1);
+			expect(res.body.products[0].name).toBe("Low Stock");
+		});
 	});
 
 	describe("POST /api/products", () => {
