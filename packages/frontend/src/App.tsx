@@ -2,6 +2,10 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { RootLayout } from "./components/layout/RootLayout";
 import { HomePage } from "./pages/home";
 import { ProductsPage } from "./pages/products";
+import { LoginPage } from "./pages/auth/login";
+import { RegisterPage } from "./pages/auth/register";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const router = createBrowserRouter([
 	{
@@ -14,14 +18,30 @@ const router = createBrowserRouter([
 			},
 			{
 				path: "products",
-				element: <ProductsPage />,
+				element: (
+					<ProtectedRoute>
+						<ProductsPage />
+					</ProtectedRoute>
+				),
+			},
+			{
+				path: "login",
+				element: <LoginPage />,
+			},
+			{
+				path: "register",
+				element: <RegisterPage />,
 			},
 		],
 	},
 ]);
 
 function App() {
-	return <RouterProvider router={router} />;
+	return (
+		<AuthProvider>
+			<RouterProvider router={router} />
+		</AuthProvider>
+	);
 }
 
 export default App;
