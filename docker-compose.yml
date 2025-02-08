@@ -11,13 +11,28 @@ services:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/inventory
       - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=http://localhost
     volumes:
       - ./packages/backend:/usr/src/app/packages/backend
       - /usr/src/app/packages/backend/node_modules
     depends_on:
       - mongodb
+    networks:
+      - app-network
 
-  # Frontend service will be added here later
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=/api
+    depends_on:
+      - backend
+    networks:
+      - app-network
 
   mongodb:
     image: mongo:latest
@@ -25,6 +40,12 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   mongodb_data:
