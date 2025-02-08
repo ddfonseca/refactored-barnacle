@@ -1,5 +1,10 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+import path from "path";
+
+// Load test environment variables
+dotenv.config({ path: path.join(__dirname, "test.env") });
 
 let mongoServer: MongoMemoryServer;
 
