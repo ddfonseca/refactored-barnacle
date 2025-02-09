@@ -12,6 +12,7 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/inventory
       - JWT_SECRET=${JWT_SECRET:-this_is_a_very_long_secret_key_for_jwt_tokens_32}
       - CORS_ORIGIN=http://localhost
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
     volumes:
       - ./packages/backend:/usr/src/app/packages/backend
       - /usr/src/app/packages/backend/node_modules
@@ -41,6 +42,16 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - app-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686" # UI
+      - "4318:4318"   # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     networks:
       - app-network
 
