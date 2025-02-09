@@ -39,10 +39,10 @@ export class ProductService {
 			const query: any = { isActive: true };
 
 			if (category) query.category = category;
-			if (minPrice || maxPrice) {
+			if (minPrice !== undefined || maxPrice !== undefined) {
 				query.price = {};
-				if (minPrice) query.price.$gte = minPrice;
-				if (maxPrice) query.price.$lte = maxPrice;
+				if (minPrice !== undefined) query.price.$gte = minPrice;
+				if (maxPrice !== undefined) query.price.$lte = maxPrice;
 			}
 			if (minQuantity || maxQuantity) {
 				query.quantity = {};
@@ -155,8 +155,13 @@ export class ProductService {
 				throw new HttpException("Search term is required", HttpStatus.BAD_REQUEST);
 			}
 
+			const searchRegex = new RegExp(searchTerm, 'i');
 			const query = {
-				$text: { $search: searchTerm },
+				$or: [
+					{ name: searchRegex },
+					{ description: searchRegex },
+					{ category: searchRegex },
+				],
 				isActive: true,
 			};
 

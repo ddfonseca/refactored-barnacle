@@ -94,6 +94,7 @@ export class ProductController {
 	async deleteProduct(@Param("id") id: string) {
 		try {
 			await this.productService.deleteProduct(id);
+			return null;
 		} catch (error) {
 			if (error?.message === "Product not found") {
 				throw new HttpException("Product not found", HttpStatus.NOT_FOUND);

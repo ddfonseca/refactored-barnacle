@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
-import { IProduct, Product } from "./product.model";
+import { Product, ProductDocument } from "./product.model";
 
 @Injectable()
 export class ProductRepository {
-	constructor(@InjectModel(Product.name) private productModel: Model<IProduct>) {}
+	constructor(@InjectModel(Product.name) private productModel: Model<ProductDocument>) {}
 
 	async findAll(
 		query: any,
@@ -14,7 +14,7 @@ export class ProductRepository {
 			limit: number;
 			sort?: { [key: string]: "asc" | "desc" };
 		}
-	): Promise<IProduct[]> {
+	): Promise<ProductDocument[]> {
 		const baseQuery = this.productModel.find(query);
 		if (options.sort) {
 			baseQuery.sort(options.sort);
@@ -26,12 +26,12 @@ export class ProductRepository {
 		return this.productModel.countDocuments(query);
 	}
 
-	async create(productData: Partial<IProduct>): Promise<IProduct> {
+	async create(productData: Partial<ProductDocument>): Promise<ProductDocument> {
 		const product = new this.productModel(productData);
 		return product.save();
 	}
 
-	async findByIdAndUpdate(id: string, updateData: Partial<IProduct>): Promise<IProduct | null> {
+	async findByIdAndUpdate(id: string, updateData: Partial<ProductDocument>): Promise<ProductDocument | null> {
 		return this.productModel.findByIdAndUpdate(
 			id,
 			{ ...updateData, updatedAt: new Date() },
@@ -39,7 +39,7 @@ export class ProductRepository {
 		);
 	}
 
-	async findById(id: string): Promise<IProduct | null> {
+	async findById(id: string): Promise<ProductDocument | null> {
 		return this.productModel.findById(id);
 	}
 
@@ -49,7 +49,7 @@ export class ProductRepository {
 			skip: number;
 			limit: number;
 		}
-	): Promise<IProduct[]> {
+	): Promise<ProductDocument[]> {
 		return this.productModel.find(query).skip(options.skip).limit(options.limit);
 	}
 }

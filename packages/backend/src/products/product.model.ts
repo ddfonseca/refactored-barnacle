@@ -1,55 +1,36 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document } from "mongoose";
 
-export interface IProduct extends Document {
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  quantity: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+@Schema({ timestamps: true, versionKey: false })
+export class Product {
+	@Prop({ required: true, trim: true, index: true })
+	name: string;
+
+	@Prop({ required: true, trim: true })
+	description: string;
+
+	@Prop({ required: true, min: 0 })
+	price: number;
+
+	@Prop({ required: true, trim: true, index: true })
+	category: string;
+
+	@Prop({ required: true, min: 0 })
+	quantity: number;
+
+	@Prop({ default: true, index: true })
+	isActive: boolean;
+
+	@Prop()
+	createdAt: Date;
+
+	@Prop()
+	updatedAt: Date;
 }
 
-const productSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    index: true
-  },
-  description: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  category: {
-    type: String,
-    required: true,
-    trim: true,
-    index: true
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
-    index: true
-  }
-}, {
-  timestamps: true,
-  versionKey: false
-});
+export const ProductSchema = SchemaFactory.createForClass(Product);
+
+export type ProductDocument = Document & Product;
 
 // Create text index for search functionality
-productSchema.index({ name: 'text', category: 'text', description: 'text' });
-
-export const Product = mongoose.model<IProduct>('Product', productSchema);
+ProductSchema.index({ name: "text", category: "text", description: "text" });
