@@ -2,10 +2,7 @@ FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
-# Install NestJS CLI globally
-RUN npm install -g @nestjs/cli
-
-# Copy root package files
+# Copy package files
 COPY package*.json ./
 COPY packages/backend/package*.json ./packages/backend/
 
@@ -13,14 +10,13 @@ COPY packages/backend/package*.json ./packages/backend/
 RUN npm install
 RUN cd packages/backend && npm install
 
-# Copy backend source code
-COPY packages/backend ./packages/backend
+# Copy the rest of the application
+COPY . .
 
-# Build TypeScript code
-WORKDIR /usr/src/app/packages/backend
-RUN npm run build
+# Build the application
+RUN cd packages/backend && npm run build
 
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "run", "start:prod"]
+# Add command to start the application
+CMD ["npm", "run", "--prefix", "packages/backend", "start:prod"]
