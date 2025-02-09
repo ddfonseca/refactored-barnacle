@@ -1,15 +1,39 @@
 services:
+  traefik:
+    image: "traefik:v3.2"
+    container_name: "traefik"
+    command:
+      - "--configfile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Traefik dashboard
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "./traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - app-network
+
   backend:
     build:
       context: .
       dockerfile: packages/backend/Dockerfile
     ports:
       - "3000:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`srv719810.hstgr.cloud`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=myresolver"
+      - "traefik.http.services.backend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=app-network"
+
     environment:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/inventory
       - JWT_SECRET=${JWT_SECRET:-this_is_a_very_long_secret_key_for_jwt_tokens_32}
-      - CORS_ORIGIN=http://localhost
+      - CORS_ORIGIN=https://srv719810.hstgr.cloud
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
     volumes:
       - ./packages/backend/src:/usr/src/app/packages/backend/src
@@ -26,6 +50,13 @@ services:
         - VITE_API_URL=/api
     ports:
       - "80:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`srv719810.hstgr.cloud`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=myresolver"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.docker.network=app-network"
     environment:
       - NODE_ENV=production
     depends_on:
