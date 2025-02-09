@@ -1,14 +1,25 @@
 # Inventory Management System
 
-A modern full-stack application for managing product inventory. Built with React, Node.js, Express, TypeScript, and MongoDB.
+A modern full-stack application for managing product inventory. Built with **React, Node.js, Express/NestJS, TypeScript, and MongoDB**.
+
+🚀 **Live Demo**: [Click here](https://srv719810.hstgr.cloud/)
 
 ## Features
 
-- 🔐 User Authentication (JWT)
-- 📦 Product Management (CRUD operations)
-- 🔍 Advanced Search & Filtering
-- 📱 Responsive Design
-- 🔄 Real-time Updates
+- 🔐 **User Authentication** (JWT)
+- 📦 **Product Management** (CRUD operations)
+- 🔍 **Advanced Search & Filtering**
+- 📱 **Responsive Design**
+- 📜 **Interactive API Documentation** [Swagger 📖](https://srv719810.hstgr.cloud/api/docs)
+- 📊 **Observability & Tracing** [OpenTelemetry 🔎](http://srv719810.hstgr.cloud:16686)
+
+## ⏳ Development Time & Tools
+
+- 🛠 **Editor**: Windsurf Editor + Claude 3.5 [(link)](https://codeium.com/windsurf)
+- ⚙️ **Backend**: 50 min
+- 🎨 **Frontend**: 95 min
+- 🔄 **Refactoring**: 80 min
+- Total: 3h45min (time spend until commit #8878de58)
 
 ## Prerequisites
 
@@ -18,12 +29,7 @@ A modern full-stack application for managing product inventory. Built with React
 
 ## Quick Start with Docker
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/yourusername/full-stack-test.git
-   cd full-stack-test
-   ```
+1. Clone the repository.
 
 2. Create environment files:
 
@@ -36,19 +42,21 @@ A modern full-stack application for managing product inventory. Built with React
    For frontend (`packages/frontend/.env`):
 
    ```bash
-   cp packages/frontend/.env.example packages/frontend/.env
+   cp packages/frontend/.env.example packages/frontend/.env.development
    ```
 
 3. Start the application:
 
    ```bash
-   docker-compose up
+   docker-compose -f docker-compose-dev.yml up
    ```
 
    The services will be available at:
 
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
+   - Frontend: http://localhost:80
+   - Backend API: http://localhost:3000
+   - Backend API Docs: http://localhost:3000/api
+   - Backend Observability: http://localhost:16686
    - MongoDB: mongodb://localhost:27017
 
 ## Manual Setup (Development)
@@ -97,7 +105,7 @@ A modern full-stack application for managing product inventory. Built with React
 3. Set up environment variables:
 
    ```bash
-   cp .env.example .env
+   cp .env.example .env.development
    ```
 
    Edit `.env` with your configuration.
@@ -106,29 +114,6 @@ A modern full-stack application for managing product inventory. Built with React
    ```bash
    npm run dev
    ```
-
-### Database Setup
-
-For local development without Docker:
-
-1. Install MongoDB Community Edition:
-
-   - [MongoDB Installation Guide](https://docs.mongodb.com/manual/installation/)
-
-2. Start MongoDB service:
-   ```bash
-   sudo systemctl start mongod    # Linux
-   brew services start mongodb     # macOS
-   ```
-
-## Running Tests
-
-### Backend Tests
-
-```bash
-cd packages/backend
-npm test
-```
 
 ## API Documentation
 
