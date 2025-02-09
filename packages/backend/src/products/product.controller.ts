@@ -1,91 +1,125 @@
-import { Request, Response } from "express";
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { ProductService } from "./product.service";
-import { logger } from "../utils/logger";
-import { MongoDBProductRepository } from "./product.repository";
+import { AppLogger } from "../utils/logger";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
+interface GetProductsQuery {
+  page?: string;
+  limit?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  category?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  minQuantity?: string;
+  maxQuantity?: string;
+}
+
+@ApiTags('products')
+@Controller('products')
 export class ProductController {
-	private readonly productService: ProductService;
+  constructor(
+    private readonly productService: ProductService,
+    private readonly logger: AppLogger
+  ) {}
 
-	constructor() {
-		const productRepository = new MongoDBProductRepository();
-		this.productService = new ProductService(productRepository);
-	}
+  @Get()
+  @ApiOperation({ summary: 'Get all products' })
+  @ApiResponse({ status: 200, description: 'Returns all products' })
+  async getAllProducts(@Query() query: GetProductsQuery) {
+    try {
+      const options = {
+        page: parseInt(query.page as string) || 1,
+        limit: parseInt(query.limit as string) || 10,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+        category: query.category,
+        minPrice: query.minPrice ? parseFloat(query.minPrice) : undefined,
+        maxPrice: query.maxPrice ? parseFloat(query.maxPrice) : undefined,
+        minQuantity: query.minQuantity ? parseInt(query.minQuantity) : undefined,
+        maxQuantity: query.maxQuantity ? parseInt(query.maxQuantity) : undefined,
+      };
 
-	async getAllProducts(req: Request, res: Response) {
-		try {
-			const options = {
-				page: parseInt(req.query.page as string) || 1,
-				limit: parseInt(req.query.limit as string) || 10,
-				sortBy: req.query.sortBy as string,
-				sortOrder: req.query.sortOrder as "asc" | "desc",
-				category: req.query.category as string,
-				minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
-				maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
-				minQuantity: req.query.minQuantity ? parseInt(req.query.minQuantity as string) : undefined,
-				maxQuantity: req.query.maxQuantity ? parseInt(req.query.maxQuantity as string) : undefined,
-			};
+      return this.productService.getAllProducts(options);
+    } catch (error) {
+      this.logger.error("Error in getAllProducts:", error);
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 
-			const result = await this.productService.getAllProducts(options);
-			res.json(result);
-		} catch (error) {
-			logger.error("Error in getAllProducts:", error);
-			res.status(500).json({ message: "Internal server error" });
-		}
-	}
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new product' })
+  @ApiResponse({ status: 201, description: 'Product created successfully' })
+  async createProduct(@Body() productData: any) {
+    try {
+      return this.productService.createProduct(productData);
+    } catch (error) {
+      this.logger.error("Error in createProduct:", error);
+      throw new HttpException('Invalid product data', HttpStatus.BAD_REQUEST);
+    }
+  }
 
-	async createProduct(req: Request, res: Response) {
-		try {
-			const product = await this.productService.createProduct(req.body);
-			res.status(201).json(product);
-		} catch (error) {
-			logger.error("Error in createProduct:", error);
-			res.status(400).json({ message: "Invalid product data" });
-		}
-	}
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a product' })
+  @ApiResponse({ status: 200, description: 'Product updated successfully' })
+  async updateProduct(@Param('id') id: string, @Body() productData: any) {
+    try {
+      return this.productService.updateProduct(id, productData);
+    } catch (error) {
+      this.logger.error("Error in updateProduct:", error);
+      if (error?.message === "Product not found") {
+        throw new HttpException('Product not found', HttpStatus.NOT_FOUND);
+      }
+      throw new HttpException('Invalid product data', HttpStatus.BAD_REQUEST);
+    }
+  }
 
-	async updateProduct(req: Request, res: Response) {
-		try {
-			const product = await this.productService.updateProduct(req.params.id, req.body);
-			res.json(product);
-		} catch (error: any) {
-			logger.error("Error in updateProduct:", error);
-			if (error?.message === "Product not found") {
-				res.status(404).json({ message: "Product not found" });
-			} else {
-				res.status(400).json({ message: "Invalid product data" });
-			}
-		}
-	}
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a product' })
+  @ApiResponse({ status: 204, description: 'Product deleted successfully' })
+  async deleteProduct(@Param('id') id: string) {
+    try {
+      await this.productService.deleteProduct(id);
+    } catch (error) {
+      this.logger.error("Error in deleteProduct:", error);
+      if (error?.message === "Product not found") {
+        throw new HttpException('Product not found', HttpStatus.NOT_FOUND);
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 
-	async deleteProduct(req: Request, res: Response) {
-		try {
-			const product = await this.productService.deleteProduct(req.params.id);
-			res.json(product);
-		} catch (error: any) {
-			logger.error("Error in deleteProduct:", error);
-			if (error?.message === "Product not found") {
-				res.status(404).json({ message: "Product not found" });
-			} else {
-				res.status(500).json({ message: "Internal server error" });
-			}
-		}
-	}
+  @Get('search')
+  @ApiOperation({ summary: 'Search products' })
+  @ApiResponse({ status: 200, description: 'Returns matching products' })
+  async searchProducts(
+    @Query('q') searchTerm: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string
+  ) {
+    try {
+      if (!searchTerm) {
+        throw new HttpException('Search term is required', HttpStatus.BAD_REQUEST);
+      }
 
-	async searchProducts(req: Request, res: Response) {
-		try {
-			const searchTerm = req.query.q as string;
-			const page = parseInt(req.query.page as string) || 1;
-			const limit = parseInt(req.query.limit as string) || 10;
-
-			if (!searchTerm) {
-				return res.status(400).json({ message: "Search term is required" });
-			}
-
-			const result = await this.productService.searchProducts(searchTerm, page, limit);
-			res.json(result);
-		} catch (error) {
-			logger.error("Error in searchProducts:", error);
-			res.status(500).json({ message: "Internal server error" });
-		}
-	}
+      return this.productService.searchProducts(
+        searchTerm,
+        page ? parseInt(page) : undefined,
+        limit ? parseInt(limit) : undefined
+      );
+    } catch (error) {
+      this.logger.error("Error in searchProducts:", error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

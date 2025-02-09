@@ -1,106 +1,85 @@
-import jwt from 'jsonwebtoken';
-import { User } from '../users/user.model';
-import { IUserRepository } from '../users/user.repository';
+import { Injectable, UnauthorizedException, ConflictException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
+import { UsersService } from "../users/users.service";
+import { User } from "../users/schemas/user.schema";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const REFRESH_SECRET = process.env.REFRESH_SECRET || 'your-refresh-secret-key';
-
+@Injectable()
 export class AuthService {
-    constructor(private userRepository: IUserRepository) {}
+	constructor(
+		private usersService: UsersService,
+		private jwtService: JwtService,
+		private configService: ConfigService
+	) {}
 
-    private generateTokens(user: User) {
-        const accessToken = jwt.sign(
-            { userId: user._id, username: user.username },
-            JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+	private generateTokens(user: User) {
+		const payload = { userId: user._id, username: user.username };
 
-        const refreshToken = jwt.sign(
-            { userId: user._id },
-            REFRESH_SECRET,
-            { expiresIn: '7d' }
-        );
+		const accessToken = this.jwtService.sign(payload);
+		const refreshToken = this.jwtService.sign(
+			{ userId: user._id },
+			{ secret: this.configService.get<string>("REFRESH_SECRET"), expiresIn: "7d" }
+		);
 
-        return { accessToken, refreshToken };
-    }
+		return { accessToken, refreshToken };
+	}
 
-    async verifyAccessToken(token: string) {
-        try {
-            const decoded = jwt.verify(token, JWT_SECRET);
-            return decoded;
-        } catch (error) {
-            throw new Error('Invalid token');
-        }
-    }
+	async validateUser(username: string, password: string): Promise<any> {
+		const user = await this.usersService.findByUsername(username);
+		if (user && (await user.comparePassword(password))) {
+			const { password, ...result } = user.toObject();
+			return result;
+		}
+		return null;
+	}
 
-    private async verifyRefreshToken(token: string) {
-        try {
-            const decoded = jwt.verify(token, REFRESH_SECRET) as { userId: string };
-            const user = await this.userRepository.findById(decoded.userId);
-            
-            if (!user || user.refreshToken !== token) {
-                throw new Error('Invalid refresh token');
-            }
+	async register(username: string, password: string) {
+		const existingUser = await this.usersService.findByUsername(username);
+		if (existingUser) {
+			throw new ConflictException("Username already exists");
+		}
 
-            return user;
-        } catch (error) {
-            throw new Error('Invalid refresh token');
-        }
-    }
+		const user = await this.usersService.create(username, password);
+		const tokens = this.generateTokens(user);
 
-    async register(username: string, password: string) {
-        // Check if user already exists
-        const existingUser = await this.userRepository.findByUsername(username);
-        if (existingUser) {
-            throw new Error('Username already exists');
-        }
+		await this.usersService.updateRefreshToken(user._id, tokens.refreshToken);
 
-        // Create new user
-        const user = await this.userRepository.create(username, password);
+		return tokens;
+	}
 
-        // Generate tokens
-        const tokens = this.generateTokens(user);
+	async login(username: string, password: string) {
+		const user = await this.validateUser(username, password);
+		if (!user) {
+			throw new UnauthorizedException("Invalid credentials");
+		}
 
-        // Save refresh token
-        await this.userRepository.updateRefreshToken(user._id, tokens.refreshToken);
+		const tokens = this.generateTokens(user);
+		await this.usersService.updateRefreshToken(user._id, tokens.refreshToken);
 
-        return tokens;
-    }
+		return tokens;
+	}
 
-    async login(username: string, password: string) {
-        const user = await this.userRepository.findByUsername(username);
-        
-        if (!user) {
-            throw new Error('Invalid credentials');
-        }
+	async refreshToken(refreshToken: string) {
+		try {
+			const decoded = this.jwtService.verify(refreshToken, {
+				secret: this.configService.get<string>("REFRESH_SECRET"),
+			});
 
-        const isValidPassword = await user.comparePassword(password);
-        if (!isValidPassword) {
-            throw new Error('Invalid credentials');
-        }
+			const user = await this.usersService.findById(decoded.userId);
+			if (!user || user.refreshToken !== refreshToken) {
+				throw new UnauthorizedException("Invalid refresh token");
+			}
 
-        const tokens = this.generateTokens(user);
-        
-        // Save refresh token to user document
-        await this.userRepository.updateRefreshToken(user._id, tokens.refreshToken);
+			const tokens = this.generateTokens(user);
+			await this.usersService.updateRefreshToken(user._id, tokens.refreshToken);
 
-        return tokens;
-    }
+			return tokens;
+		} catch {
+			throw new UnauthorizedException("Invalid refresh token");
+		}
+	}
 
-    async refreshToken(refreshToken: string) {
-        const user = await this.verifyRefreshToken(refreshToken);
-        const tokens = this.generateTokens(user);
-
-        // Update refresh token
-        await this.userRepository.updateRefreshToken(user._id, tokens.refreshToken);
-
-        return tokens;
-    }
-
-    async logout(userId: string) {
-        const user = await this.userRepository.updateRefreshToken(userId, undefined);
-        if (!user) {
-            throw new Error('User not found');
-        }
-    }
+	async logout(userId: string): Promise<void> {
+		await this.usersService.updateRefreshToken(userId, null);
+	}
 }

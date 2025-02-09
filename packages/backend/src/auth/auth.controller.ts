@@ -1,59 +1,49 @@
-import { Request, Response } from 'express';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { UserModel } from '../users/user.model';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RegisterDto, LoginDto, RefreshTokenDto, LogoutDto } from './dto/auth.dto';
 
+@ApiTags('auth')
+@Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) {}
 
-    async register(req: Request, res: Response) {
-        try {
-            const { username, password } = req.body;
-            const tokens = await this.authService.register(username, password);
-            res.status(201).json(tokens);
-        } catch (error) {
-            if (error instanceof Error && error.message === 'Username already exists') {
-                return res.status(400).json({ message: error.message });
-            }
-            res.status(500).json({ message: 'Error creating user' });
-        }
-    }
+  @Post('register')
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'User successfully registered' })
+  @ApiResponse({ status: 400, description: 'Username already exists' })
+  async register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto.username, registerDto.password);
+  }
 
-    async login(req: Request, res: Response) {
-        try {
-            const { username, password } = req.body;
-            const tokens = await this.authService.login(username, password);
-            res.json(tokens);
-        } catch (error) {
-            if (error instanceof Error && error.message === 'Invalid credentials') {
-                return res.status(401).json({ message: error.message });
-            }
-            res.status(500).json({ message: 'Error logging in' });
-        }
-    }
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login user' })
+  @ApiResponse({ status: 200, description: 'User successfully logged in' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto.username, loginDto.password);
+  }
 
-    async refreshToken(req: Request, res: Response) {
-        try {
-            const { refreshToken } = req.body;
-            const tokens = await this.authService.refreshToken(refreshToken);
-            res.json(tokens);
-        } catch (error) {
-            if (error instanceof Error && error.message === 'Invalid refresh token') {
-                return res.status(401).json({ message: error.message });
-            }
-            res.status(500).json({ message: 'Error refreshing token' });
-        }
-    }
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({ status: 200, description: 'Token successfully refreshed' })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  }
 
-    async logout(req: Request, res: Response) {
-        try {
-            const { userId } = req.body;
-            await this.authService.logout(userId);
-            res.json({ message: 'Logged out successfully' });
-        } catch (error) {
-            if (error instanceof Error && error.message === 'User not found') {
-                return res.status(404).json({ message: error.message });
-            }
-            res.status(500).json({ message: 'Error logging out' });
-        }
-    }
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout user' })
+  @ApiResponse({ status: 200, description: 'User successfully logged out' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async logout(@Body() logoutDto: LogoutDto) {
+    await this.authService.logout(logoutDto.userId);
+    return { message: 'Logged out successfully' };
+  }
 }

@@ -1,49 +1,38 @@
-import { Product, IProduct } from "./product.model";
-export interface IProductRepository {
-	findAll(
-		query: any,
-		options: {
-			skip: number;
-			limit: number;
-			sort: { [key: string]: "asc" | "desc" };
-		}
-	): Promise<IProduct[]>;
-	count(query: any): Promise<number>;
-	create(productData: Partial<IProduct>): Promise<IProduct>;
-	findByIdAndUpdate(id: string, updateData: Partial<IProduct>): Promise<IProduct | null>;
-	findById(id: string): Promise<IProduct | null>;
-	search(
-		query: any,
-		options: {
-			skip: number;
-			limit: number;
-		}
-	): Promise<IProduct[]>;
-}
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { IProduct, Product } from "./product.model";
 
-export class MongoDBProductRepository implements IProductRepository {
+@Injectable()
+export class ProductRepository {
+	constructor(@InjectModel(Product.name) private productModel: Model<IProduct>) {}
+
 	async findAll(
 		query: any,
 		options: {
 			skip: number;
 			limit: number;
-			sort: { [key: string]: "asc" | "desc" };
+			sort?: { [key: string]: "asc" | "desc" };
 		}
 	): Promise<IProduct[]> {
-		return Product.find(query).sort(options.sort).skip(options.skip).limit(options.limit);
+		const baseQuery = this.productModel.find(query);
+		if (options.sort) {
+			baseQuery.sort(options.sort);
+		}
+		return baseQuery.skip(options.skip).limit(options.limit);
 	}
 
 	async count(query: any): Promise<number> {
-		return Product.countDocuments(query);
+		return this.productModel.countDocuments(query);
 	}
 
 	async create(productData: Partial<IProduct>): Promise<IProduct> {
-		const product = new Product(productData);
+		const product = new this.productModel(productData);
 		return product.save();
 	}
 
 	async findByIdAndUpdate(id: string, updateData: Partial<IProduct>): Promise<IProduct | null> {
-		return Product.findByIdAndUpdate(
+		return this.productModel.findByIdAndUpdate(
 			id,
 			{ ...updateData, updatedAt: new Date() },
 			{ new: true, runValidators: true }
@@ -51,7 +40,7 @@ export class MongoDBProductRepository implements IProductRepository {
 	}
 
 	async findById(id: string): Promise<IProduct | null> {
-		return Product.findById(id);
+		return this.productModel.findById(id);
 	}
 
 	async search(
@@ -61,6 +50,6 @@ export class MongoDBProductRepository implements IProductRepository {
 			limit: number;
 		}
 	): Promise<IProduct[]> {
-		return Product.find(query).skip(options.skip).limit(options.limit);
+		return this.productModel.find(query).skip(options.skip).limit(options.limit);
 	}
 }

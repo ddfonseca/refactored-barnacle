@@ -1,6 +1,7 @@
-import { IProduct } from "./product.model";
-import { config } from "../config";
-import { IProductRepository } from "./product.repository";
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { IProduct } from "./schemas/product.schema";
+import { ProductRepository } from "./product.repository";
 
 interface QueryOptions {
 	page?: number;
@@ -14,13 +15,17 @@ interface QueryOptions {
 	maxQuantity?: number;
 }
 
+@Injectable()
 export class ProductService {
-	constructor(private readonly productRepository: IProductRepository) {}
+	constructor(
+		private readonly productRepository: ProductRepository,
+		private readonly configService: ConfigService
+	) {}
 
 	async getAllProducts(options: QueryOptions) {
 		const {
 			page = 1,
-			limit = config.defaultPageSize,
+			limit = this.configService.get<number>("app.defaultPageSize"),
 			sortBy = "createdAt",
 			sortOrder = "desc",
 			category,
@@ -50,7 +55,7 @@ export class ProductService {
 		const [products, total] = await Promise.all([
 			this.productRepository.findAll(query, {
 				skip,
-				limit: Math.min(limit, config.maxPageSize),
+				limit: Math.min(limit, this.configService.get<number>("app.maxPageSize")),
 				sort: sortOptions,
 			}),
 			this.productRepository.count(query),
@@ -85,7 +90,11 @@ export class ProductService {
 		return product;
 	}
 
-	async searchProducts(searchTerm: string, page = 1, limit = config.defaultPageSize) {
+	async searchProducts(
+		searchTerm: string,
+		page = 1,
+		limit = this.configService.get<number>("app.defaultPageSize")
+	) {
 		const query = {
 			$text: { $search: searchTerm },
 			isActive: true,
@@ -96,7 +105,7 @@ export class ProductService {
 		const [products, total] = await Promise.all([
 			this.productRepository.search(query, {
 				skip,
-				limit: Math.min(limit, config.maxPageSize),
+				limit: Math.min(limit, this.configService.get<number>("app.maxPageSize")),
 			}),
 			this.productRepository.count(query),
 		]);

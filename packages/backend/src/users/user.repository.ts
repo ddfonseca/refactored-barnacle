@@ -1,33 +1,26 @@
-import { User, UserModel } from './user.model';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { User, UserDocument } from "./schemas/user.schema";
 
-export interface IUserRepository {
-    findByUsername(username: string): Promise<User | null>;
-    findById(id: string): Promise<User | null>;
-    create(username: string, password: string): Promise<User>;
-    updateRefreshToken(userId: string, refreshToken: string | undefined): Promise<User | null>;
-}
+@Injectable()
+export class UserRepository {
+	constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-export class MongoDBUserRepository implements IUserRepository {
-    async findByUsername(username: string): Promise<User | null> {
-        return UserModel.findOne({ username });
-    }
+	async findByUsername(username: string): Promise<UserDocument | null> {
+		return this.userModel.findOne({ username }).exec();
+	}
 
-    async findById(id: string): Promise<User | null> {
-        return UserModel.findById(id);
-    }
+	async findById(id: string): Promise<UserDocument | null> {
+		return this.userModel.findById(id).exec();
+	}
 
-    async create(username: string, password: string): Promise<User> {
-        const user = new UserModel({ username, password });
-        return user.save();
-    }
+	async create(username: string, password: string): Promise<UserDocument> {
+		const user = new this.userModel({ username, password });
+		return user.save();
+	}
 
-    async updateRefreshToken(userId: string, refreshToken: string | undefined): Promise<User | null> {
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            return null;
-        }
-
-        user.refreshToken = refreshToken;
-        return user.save();
-    }
+	async updateRefreshToken(userId: string, refreshToken: string | null): Promise<void> {
+		await this.userModel.updateOne({ _id: userId }, { refreshToken }).exec();
+	}
 }
