@@ -17,6 +17,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState(AuthService.getUser());
 
     useEffect(() => {
+        const initializeAuth = async () => {
+            if (AuthService.isAuthenticated()) {
+                try {
+                    // Validate the current token or refresh if needed
+                    await AuthService.validateToken();
+                    setIsAuthenticated(true);
+                    setUser(AuthService.getUser());
+                } catch (error) {
+                    // If validation fails, try to refresh the token
+                    try {
+                        await AuthService.refreshToken();
+                        setIsAuthenticated(true);
+                        setUser(AuthService.getUser());
+                    } catch (refreshError) {
+                        // If refresh fails, clear auth state
+                        AuthService.clearAuth();
+                        setIsAuthenticated(false);
+                        setUser(null);
+                    }
+                }
+            }
+        };
+
+        initializeAuth();
+
         // Set up axios interceptor for token refresh
         const interceptor = api.interceptors.response.use(
             (response) => response,
@@ -42,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
 
         // Set authorization header for all requests
-        api.interceptors.request.use((config) => {
+        const requestInterceptor = api.interceptors.request.use((config) => {
             const token = AuthService.getAccessToken();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
@@ -52,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => {
             api.interceptors.response.eject(interceptor);
+            api.interceptors.request.eject(requestInterceptor);
         };
     }, []);
 

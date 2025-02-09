@@ -87,7 +87,25 @@ class AuthService {
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     }
 
-    private static clearAuth(): void {
+    static async validateToken(): Promise<void> {
+        const token = this.getAccessToken();
+        if (!token) {
+            throw new Error('No access token available');
+        }
+
+        try {
+            // Make a request to a protected endpoint to validate the token
+            await api.get('/auth/validate', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+        } catch (error) {
+            throw new Error('Invalid token');
+        }
+    }
+
+    static clearAuth(): void {
         localStorage.removeItem(this.ACCESS_TOKEN_KEY);
         localStorage.removeItem(this.REFRESH_TOKEN_KEY);
         localStorage.removeItem(this.USER_KEY);
